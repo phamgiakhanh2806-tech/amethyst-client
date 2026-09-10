@@ -1,49 +1,52 @@
-package com.example.addon;
+package com.example.addon.modules;
 
-import com.example.addon.commands.CommandExample;
-import com.example.addon.hud.HudExample;
-import com.example.addon.modules.ModuleExample;
-import com.mojang.logging.LogUtils;
-import meteordevelopment.meteorclient.addons.GithubRepo;
-import meteordevelopment.meteorclient.addons.MeteorAddon;
-import meteordevelopment.meteorclient.commands.Commands;
-import meteordevelopment.meteorclient.systems.hud.Hud;
-import meteordevelopment.meteorclient.systems.hud.HudGroup;
+import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.systems.modules.Category;
-import meteordevelopment.meteorclient.systems.modules.Modules;
-import org.slf4j.Logger;
+import meteordevelopment.meteorclient.systems.modules.Module;
+import meteordevelopment.meteorclient.utils.player.ChatUtils;
+import meteordevelopment.orbit.EventHandler;
+import net.minecraft.block.Blocks;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.math.BlockPos;
 
-public class AddonTemplate extends MeteorAddon {
-    public static final Logger LOG = LogUtils.getLogger();
-    public static final Category CATEGORY = new Category("Example");
-    public static final HudGroup HUD_GROUP = new HudGroup("Example");
+import java.util.HashSet;
+import java.util.Set;
 
-    @Override
-    public void onInitialize() {
-        LOG.info("Initializing Meteor Addon Template");
+public class AmethystScanner extends Module {
+    private final Set<BlockPos> detectedBlocks = new HashSet<>();
 
-        // Modules
-        Modules.get().add(new ModuleExample());
-
-        // Commands
-        Commands.add(new CommandExample());
-
-        // HUD
-        Hud.get().register(HudExample.INFO);
+    public AmethystScanner(Category category) {
+        super(category, "amethyst-scanner", "Quét Amethyst kèm báo âm thanh.");
     }
 
     @Override
-    public void onRegisterCategories() {
-        Modules.registerCategory(CATEGORY);
+    public void onActivate() {
+        detectedBlocks.clear();
     }
 
-    @Override
-    public String getPackage() {
-        return "com.example.addon";
-    }
+    @EventHandler
+    private void onTick(TickEvent.Pre event) {
+        if (mc.player == null || mc.world == null) return;
 
-    @Override
-    public GithubRepo getRepo() {
-        return new GithubRepo("MeteorDevelopment", "meteor-addon-template");
+        BlockPos playerPos = mc.player.getBlockPos();
+        int radius = 16; 
+
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -radius; y <= radius; y++) {
+                for (int z = -radius; z <= radius; z++) {
+                    BlockPos targetPos = playerPos.add(x, y, z);
+                    if (detectedBlocks.contains(targetPos)) continue;
+
+                    var block = mc.world.getBlockState(targetPos).getBlock();
+                    if (block == Blocks.BUDDING_AMETHYST || block == Blocks.AMETHYST_CLUSTER) {
+                        detectedBlocks.add(targetPos);
+                        ChatUtils.info("Có Amethyst tại X: " + targetPos.getX() + " Y: " + targetPos.getY() + " Z: " + targetPos.getZ());
+                        mc.world.playSound(mc.player, targetPos, SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.BLOCKS, 1.0f, 1.0f);
+                    }
+                }
+            }
+        }
     }
 }
+Modules.get().add(new AmethystScanner(CATEGORY));
