@@ -10,7 +10,6 @@ public class AddonTemplate extends MeteorAddon {
 
     @Override
     public void onInitialize() {
-        // Đăng ký Module AmethystScanner vào Meteor
         Modules.get().add(new AmethystScanner(CATEGORY));
     }
 
